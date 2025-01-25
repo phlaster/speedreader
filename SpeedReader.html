@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speed Reader</title>
+    <title>📚 Speed Reader</title>
     <style>
         :root {
             --bg-color: #f0f0f0;
@@ -124,7 +124,44 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        #playPause {
+            font-size: 120px;
+            margin-top: 20px;
+        }
+
+        #fastReverse {
+            font-size: 40px;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+
+        #fastReverse:hover::after {
+            content: "-10 words";
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 100%;
+            font-size: 14px;
+            white-space: nowrap;
+            background: var(--bg-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #progressBar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background-color: red;
+            width: 0%;
+            transition: width 0.1s;
+            display: none;
         }
 
         .file-emoji {
@@ -168,6 +205,21 @@
             z-index: 1;
         }
 
+        #replay:not(:disabled):hover::after {
+            content: "Replay";
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 100%;
+            font-size: 14px;
+            white-space: nowrap;
+            background: var(--bg-color);
+            color: var(--text-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
         #pauseToggle {
             position: absolute;
             left: calc(50% + 80px);
@@ -183,6 +235,7 @@
             font-size: 14px;
             white-space: nowrap;
             background: var(--bg-color);
+            color: var(--text-color);
             padding: 2px 8px;
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -200,6 +253,7 @@
     </style>
 </head>
 <body>
+    <div id="progressBar"></div>
     <label class="file-emoji" title="Upload your .txt file">
         📄
         <input type="file" id="fileInput" accept=".txt">
@@ -223,8 +277,9 @@
     </div>
 
     <div class="speed-control">
-        <button id="playPause" disabled>▶️</button>
+        <button id="fastReverse" title="-10 words" disabled>⏪</button>
         <input type="range" id="wpmSlider" min="100" max="1000" value="300">
+        <button id="playPause" disabled>▶️</button>
     </div>
 
     <div id="stats"></div>
@@ -247,7 +302,9 @@
             replay: document.getElementById('replay'),
             stats: document.getElementById('stats'),
             pauseToggle: document.getElementById('pauseToggle'),
-            themeToggle: document.getElementById('themeToggle')
+            themeToggle: document.getElementById('themeToggle'),
+            fastReverse: document.getElementById('fastReverse'),
+            progressBar: document.getElementById('progressBar')
         };
 
         elements.themeToggle.addEventListener('click', toggleTheme);
@@ -266,6 +323,7 @@
                 return;
             }
 
+            elements.progressBar.style.display = 'block';
             const reader = new FileReader();
             
             reader.onload = function(e) {
@@ -285,6 +343,8 @@
                 elements.playPause.disabled = false;
                 elements.replay.disabled = false;
                 elements.pauseToggle.disabled = false;
+                updateButtonStates();
+                updateProgressBar();
             };
             
             reader.readAsText(file);
@@ -344,6 +404,7 @@
 
         function showCurrentWord() {
             if(currentWordIndex >= words.length) return;
+            updateProgressBar();
 
             const wordInfo = words[currentWordIndex];
             const fullWord = wordInfo.word + (wordInfo.punctuation || '');
@@ -360,13 +421,15 @@
         }
 
         function showNextWord() {
-            if(!isPlaying || currentWordIndex >= words.length) return;
+            if (!isPlaying || currentWordIndex >= words.length) return;
 
             currentWordIndex++;
+            updateButtonStates();
             showCurrentWord();
 
-            if(currentWordIndex >= words.length) {
+            if (currentWordIndex >= words.length) {
                 stopPlayback();
+                updateProgressBar();
                 return;
             }
 
@@ -392,6 +455,7 @@
             clearTimeout(timeout);
             showStats();
             startTime = 0;
+            updateButtonStates();
         }
 
         elements.replay.addEventListener('click', replay);
@@ -405,6 +469,8 @@
             totalPauseDuration = 0;
             elements.playPause.disabled = false;
             showCurrentWord();
+            updateButtonStates();
+            updateProgressBar();
         }
 
         elements.pauseToggle.addEventListener('click', togglePauses);
@@ -436,6 +502,32 @@
 
         function resetStats() {
             elements.stats.textContent = '';
+        }
+
+        elements.fastReverse.addEventListener('click', function() {
+            currentWordIndex = Math.max(0, currentWordIndex - 10);
+            if(isPlaying) {
+                clearTimeout(timeout);
+                showNextWord();
+            } else {
+                showCurrentWord();
+            }
+            updateButtonStates();
+            updateProgressBar();
+        });
+
+        function updateProgressBar() {
+            let progress;
+            if (currentWordIndex >= words.length - 1) {
+                progress = 100;
+            } else {
+                progress = (currentWordIndex / (words.length - 1)) * 100;
+            }
+            elements.progressBar.style.width = progress + '%';
+        }
+
+        function updateButtonStates() {
+            elements.fastReverse.disabled = words.length === 0 || currentWordIndex === 0 || currentWordIndex >= words.length;
         }
 
         elements.pauseToggle.setAttribute('data-tooltip', "Pause on punctuation");
