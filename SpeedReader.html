@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speed Reader</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+        }
+
+        .dark-theme {
+            --bg-color: #2d2d2d;
+            --text-color: #fff;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        button {
+            padding: 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-size: 40px;
+        }
+
+        button:not(:disabled):hover, .file-emoji:hover {
+            transform: scale(1.1);
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        #wordDisplay {
+            font-size: 48px;
+            text-align: center;
+            margin: 60px 0;
+            height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .word-container {
+            position: relative;
+            width: 900px;
+            height: 80px;
+        }
+
+        .word-parts {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 0;
+        }
+
+        .word-before {
+            position: absolute;
+            right: 100%;
+            top: 0;
+            font-size: 48px;
+        }
+
+        .word-after {
+            position: absolute;
+            left: 100%;
+            top: 0;
+            font-size: 48px;
+        }
+
+        .highlight {
+            color: red;
+            position: relative;
+            display: inline-block;
+            font-size: 48px;
+            line-height: 1;
+            transform: translateY(+6%);
+        }
+
+        .arrows {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 70px;
+            font-weight: 900;
+            color: var(--text-color);
+            line-height: 0.5;
+            pointer-events: none;
+        }
+
+        .arrow-up {
+            bottom: calc(100% + 2px);
+            transform: translateX(-50%) scaleY(0.8);
+        }
+
+        .arrow-down {
+            top: calc(100% + 2px);
+            transform: translateX(-50%) scaleY(0.8);
+        }
+
+        #stats {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            color: var(--text-color);
+        }
+
+        .speed-control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .file-emoji {
+            font-size: 40px;
+            cursor: pointer;
+            position: absolute;
+            left: calc(50% - 140px);
+            top: 20px;
+            transition: transform 0.2s;
+        }
+
+        .file-emoji input {
+            display: none;
+        }
+
+        .file-emoji:hover::after {
+            content: "Upload your .txt file";
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 100%;
+            font-size: 14px;
+            white-space: nowrap;
+            background: var(--bg-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #wpmSlider {
+            width: 50%;
+            margin: 0 auto;
+            background: var(--text-color);
+        }
+
+        #replay {
+            position: absolute;
+            top: -69px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        #pauseToggle {
+            position: absolute;
+            left: calc(50% + 80px);
+            top: 20px;
+        }
+
+        #pauseToggle:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 100%;
+            font-size: 14px;
+            white-space: nowrap;
+            background: var(--bg-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #themeToggle {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 40px;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <label class="file-emoji" title="Upload your .txt file">
+        📄
+        <input type="file" id="fileInput" accept=".txt">
+    </label>
+
+    <button id="themeToggle">🌚</button>
+    <button id="pauseToggle" disabled data-tooltip="Pause on punctuation">🚓</button>
+
+    <div id="wordDisplay">
+        <button id="replay" disabled>🔄</button>
+        <div class="word-container">
+            <div class="word-parts">
+                <span class="word-before"></span>
+                <span class="highlight">
+                    <div class="arrows arrow-up">↓</div>
+                    <div class="arrows arrow-down">↑</div>
+                </span>
+                <span class="word-after"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="speed-control">
+        <button id="playPause" disabled>▶️</button>
+        <input type="range" id="wpmSlider" min="100" max="1000" value="300">
+    </div>
+
+    <div id="stats"></div>
+
+    <script>
+        let words = [];
+        let currentWordIndex = 0;
+        let isPlaying = false;
+        let timeout;
+        let startTime = 0;
+        let totalPauseDuration = 0;
+        let pauseStart = 0;
+        let baseInterval = 60000 / 300;
+        let pausesEnabled = false;
+
+        const elements = {
+            fileInput: document.getElementById('fileInput'),
+            wpmSlider: document.getElementById('wpmSlider'),
+            playPause: document.getElementById('playPause'),
+            replay: document.getElementById('replay'),
+            stats: document.getElementById('stats'),
+            pauseToggle: document.getElementById('pauseToggle'),
+            themeToggle: document.getElementById('themeToggle')
+        };
+
+        elements.themeToggle.addEventListener('click', toggleTheme);
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            elements.themeToggle.textContent = document.body.classList.contains('dark-theme') ? '☀️' : '🌚';
+        }
+
+        elements.fileInput.addEventListener('change', handleFileUpload);
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file.name.endsWith('.txt')) {
+                alert('Please select a .txt file');
+                return;
+            }
+
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                isPlaying = false;
+                startTime = 0;
+                totalPauseDuration = 0;
+                pauseStart = 0;
+                clearTimeout(timeout);
+                
+                const text = e.target.result;
+                words = processText(text);
+                currentWordIndex = 0;
+                resetStats();
+                showCurrentWord();
+                
+                elements.playPause.textContent = '▶️';
+                elements.playPause.disabled = false;
+                elements.replay.disabled = false;
+                elements.pauseToggle.disabled = false;
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function processText(text) {
+            const tokens = text.split(/(\s+)/);
+            const processedWords = [];
+            
+            for(let i = 0; i < tokens.length; i++) {
+                if(tokens[i].trim().length === 0) continue;
+                
+                const wordInfo = {
+                    word: tokens[i].replace(/\n/g, ' ').trim(),
+                    followedByNewline: /\n/.test(tokens[i+1] || ''),
+                };
+
+                const matches = wordInfo.word.match(/^(\S*?)([.,!?;:]+)?$/);
+                if(matches) {
+                    wordInfo.word = matches[1] || '';
+                    wordInfo.punctuation = matches[2] || '';
+                }
+
+                processedWords.push(wordInfo);
+                if(tokens[i+1]) i++;
+            }
+            return processedWords.filter(w => w.word.length > 0 || w.punctuation.length > 0);
+        }
+
+        elements.wpmSlider.addEventListener('input', updateSpeed);
+
+        function updateSpeed() {
+            baseInterval = 60000 / elements.wpmSlider.value;
+        }
+
+        elements.playPause.addEventListener('click', togglePlay);
+
+        function togglePlay() {
+            if (words.length === 0 || currentWordIndex >= words.length) return;
+            
+            isPlaying = !isPlaying;
+            elements.playPause.textContent = isPlaying ? '⏸️' : '▶️';
+            elements.playPause.disabled = words.length === 0;
+            
+            if(isPlaying) {
+                if(startTime === 0) startTime = Date.now();
+                if(pauseStart) {
+                    totalPauseDuration += Date.now() - pauseStart;
+                    pauseStart = 0;
+                }
+                showNextWord();
+            } else {
+                pauseStart = Date.now();
+                clearTimeout(timeout);
+            }
+        }
+
+        function showCurrentWord() {
+            if(currentWordIndex >= words.length) return;
+
+            const wordInfo = words[currentWordIndex];
+            const fullWord = wordInfo.word + (wordInfo.punctuation || '');
+            const highlightPosition = Math.floor((fullWord.length - 1) * 0.4);
+            
+            const highlightChar = fullWord[highlightPosition] || '';
+            const before = fullWord.slice(0, highlightPosition);
+            const after = fullWord.slice(highlightPosition + 1);
+
+            document.querySelector('.highlight').innerHTML = 
+                `${highlightChar}<div class="arrows arrow-up">↓</div><div class="arrows arrow-down">↑</div>`;
+            document.querySelector('.word-before').textContent = before;
+            document.querySelector('.word-after').textContent = after;
+        }
+
+        function showNextWord() {
+            if(!isPlaying || currentWordIndex >= words.length) return;
+
+            currentWordIndex++;
+            showCurrentWord();
+
+            if(currentWordIndex >= words.length) {
+                stopPlayback();
+                return;
+            }
+
+            const delay = calculateDelay(words[currentWordIndex]);
+            timeout = setTimeout(showNextWord, delay);
+        }
+
+        function calculateDelay(wordInfo) {
+            if(!pausesEnabled) return baseInterval;
+            
+            let multiplier = 1;
+            if(wordInfo.followedByNewline) multiplier = 5;
+            else if(wordInfo.punctuation === '.') multiplier = 3;
+            else if(wordInfo.punctuation) multiplier = 2;
+            
+            return baseInterval * multiplier;
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            elements.playPause.textContent = '▶️';
+            elements.playPause.disabled = true;
+            clearTimeout(timeout);
+            showStats();
+            startTime = 0;
+        }
+
+        elements.replay.addEventListener('click', replay);
+
+        function replay() {
+            if (words.length === 0) return;
+            
+            if(isPlaying) togglePlay();
+            currentWordIndex = 0;
+            startTime = 0;
+            totalPauseDuration = 0;
+            elements.playPause.disabled = false;
+            showCurrentWord();
+        }
+
+        elements.pauseToggle.addEventListener('click', togglePauses);
+
+        function togglePauses() {
+            pausesEnabled = !pausesEnabled;
+            elements.pauseToggle.textContent = pausesEnabled ? "🚗" : "🚓";
+            elements.pauseToggle.setAttribute('data-tooltip', 
+                pausesEnabled ? "Do not pause on punctuation" : "Pause on punctuation");
+        }
+
+        function showStats() {
+            if(startTime === 0) return;
+            
+            const totalTime = (Date.now() - startTime - totalPauseDuration) / 1000;
+            const minutes = totalTime / 60;
+            const wpm = Math.round(words.length / minutes);
+            
+            let timeString;
+            if(totalTime > 60) {
+                timeString = `${(totalTime/60).toFixed(1)} minutes`;
+            } else {
+                timeString = `${totalTime.toFixed(1)} seconds`;
+            }
+            
+            elements.stats.textContent = 
+                `You read ${words.length} words in ${timeString} (average speed ${wpm} WPM)`;
+        }
+
+        function resetStats() {
+            elements.stats.textContent = '';
+        }
+
+        elements.pauseToggle.setAttribute('data-tooltip', "Pause on punctuation");
+    </script>
+</body>
+</html>
