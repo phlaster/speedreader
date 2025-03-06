@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        📚 Speed Reader
+    </title>
+    <!-- CSS -->
+</head>
+
+<body>
+    <div id="progressBar"></div>
+    <label class="file-emoji" title="Upload your .txt file">
+        📄
+        <input type="file" id="fileInput" accept=".txt">
+    </label>
+    <button id="themeToggle">
+        🌚
+    </button>
+    <button id="pauseToggle" disabled data-tooltip="Pause on punctuation">
+        🚓
+    </button>
+    <div id="wordDisplay">
+        <button id="replay" disabled>🔄</button>
+        <div class="word-container">
+            <div class="word-parts">
+                <span class="word-before"></span>
+                <span class="highlight">
+                    <div class="arrows arrow-up">
+                        ↓
+                    </div>
+                    <div class="arrows arrow-down">
+                        ↑
+                    </div>
+                </span>
+                <span class="word-after"></span>
+            </div>
+        </div>
+    </div>
+    <div class="speed-control">
+        <button id="fastReverse" title="-10 words" disabled>
+            ⏪
+        </button>
+        <input type="range" id="wpmSlider" min="100" max="1000" value="300" disabled>
+        <button id="playPause" disabled>
+            ▶️
+        </button>
+    </div>
+    <div id="stats"></div>
+    <!-- JS -->
+</body>
+
+</html>
