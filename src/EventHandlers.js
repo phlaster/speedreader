@@ -1,4 +1,4 @@
-export class EventHandlers {
+class EventHandlers {
     constructor(elements, textProcessor, speedController, uiController) {
         this.elements = elements;
         this.textProcessor = textProcessor;
@@ -13,6 +13,8 @@ export class EventHandlers {
         this.pauseStart = 0;
 
         this.initEventListeners();
+        this.uiController.updateButtonStates(this.isPlaying, this.currentWordIndex, this.words);
+        this.elements.themeToggle.setAttribute('data-tooltip', 'Dark theme');
     }
 
     initEventListeners() {
@@ -28,6 +30,8 @@ export class EventHandlers {
     toggleTheme() {
         document.body.classList.toggle('dark-theme');
         this.elements.themeToggle.textContent = document.body.classList.contains('dark-theme') ? '☀️' : '🌚';
+        this.elements.themeToggle.setAttribute('data-tooltip', 
+            document.body.classList.contains('dark-theme') ? 'Light theme' : 'Dark theme');
     }
 
     handleFileUpload(event) {
