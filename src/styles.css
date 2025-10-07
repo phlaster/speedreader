@@ -118,13 +118,13 @@ button:disabled {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 5px;
     margin-top: 20px;
 }
 
 #playPause {
-    font-size: 120px;
-    margin-top: 20px;
+    font-size: 110px;
+    margin-top: 10px;
 }
 
 #fastReverse {
@@ -162,7 +162,7 @@ button:disabled {
     font-size: 40px;
     cursor: pointer;
     position: absolute;
-    left: calc(50% - 140px);
+    left: calc(50% - 120px);
     top: 20px;
     transition: transform 0.2s;
 }
@@ -225,7 +225,7 @@ button:disabled {
 
 #pauseToggle {
     position: absolute;
-    left: calc(50% + 80px);
+    left: calc(50% + 70px);
     top: 20px;
 }
 
