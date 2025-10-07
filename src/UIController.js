@@ -1,4 +1,4 @@
-export class UIController {
+class UIController {
     constructor(elements) {
         this.elements = elements;
     }
@@ -60,5 +60,6 @@ export class UIController {
         this.elements.fastReverse.disabled = words.length === 0 ||
             currentWordIndex === 0 ||
             currentWordIndex >= words.length;
+        this.elements.replay.disabled = words.length === 0 || currentWordIndex <= 0;
     }
 }
