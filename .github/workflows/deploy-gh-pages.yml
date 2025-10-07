@@ -28,6 +28,9 @@ jobs:
       - name: Check build output
         run: ls -lh dist/speedreader.html
 
+      - name: Rename to index.html
+        run: cp dist/speedreader.html dist/index.html
+
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
